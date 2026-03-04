@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "buildbarn-config-mcp": {
+      "type": "stdio",
+      "command": "go",
+      "args": ["run", "./cmd/mcp-server"],
+      "env": {
+        "GITHUB_TOKEN": "${env:GITHUB_TOKEN}",
+        "MCP_TRANSPORT": "stdio"
+      },
+      "cwd": "${workspaceFolder}"
+    }
+  }
+}

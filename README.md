@@ -1,161 +1,102 @@
 # Buildbarn Config MCP Server
 
-🚀 **Status:** Minimal Working Version (v0.1.0)
+An [MCP](https://modelcontextprotocol.io/) server that gives AI agents (GitHub Copilot, Claude, etc.) tools to read, edit, and commit Buildbarn Jsonnet configurations stored in `Hermetiq/bb-config`.
 
-## What This Is
+## Tools
 
-An MCP (Model Context Protocol) server that provides AI agents with tools to intelligently navigate and edit Buildbarn Jsonnet configurations.
-
-### Current Status: Minimal Working Demo
-
-✅ **Working:**
-- 8 MCP tools with mock implementations
-- 4 MCP resources (static and dynamic)
-- Runs via stdio transport
-- Testable with MCP Inspector
-
-🚧 **Not Yet Implemented:**
-- Proto descriptor loading and indexing
-- ConfigService gRPC client
-- Jsonnet evaluator (go-jsonnet)
-- HTTP/SSE transport
+| Tool | Description |
+|------|-------------|
+| `list_collections` | List cluster config collections in `Hermetiq/bb-config` |
+| `list_files` | List `.jsonnet` files in a collection |
+| `read_file` | Read a file (returns source + blob SHA) |
+| `write_file` | Commit updated content (optimistic locking via SHA) |
+| `bb_config_update_field` | Update a scalar value at a JSON path |
+| `bb_config_add_child` | Append to array or add key to object |
+| `bb_config_remove_field` | Remove a field or array element |
+| `bb_config_change_oneof` | Switch a OneOf field to a different case |
+| `search_protos` | Search proto definitions |
+| `describe_message` | Get docs for a proto message type |
+| `get_field_path` | Resolve a dotted field path |
+| `list_config_messages` | List top-level Buildbarn config messages |
 
 ## Quick Start
 
-### Build and Run
+### Requirements
+
+- Go 1.22+
+- `GITHUB_TOKEN` with read/write access to `Hermetiq/bb-config` (optional — server degrades to mock mode without it)
+
+### Run as HTTP server (for web UI / buildbarn-forms)
 
 ```bash
-# Build
-go build -o bin/mcp-server ./cmd/mcp-server
-
-# Run (stdio mode)
-./bin/mcp-server
-
-# Or run directly
-go run ./cmd/mcp-server
+GITHUB_TOKEN=ghp_xxx MCP_TRANSPORT=http MCP_PORT=8080 go run ./cmd/mcp-server
 ```
 
-### Test with MCP Inspector
+Then start the `buildbarn-forms` e2e harness pointing at it:
 
 ```bash
-# Install Node.js if you don't have it, then:
-npx @modelcontextprotocol/inspector go run ./cmd/mcp-server
+cd /path/to/buildbarn-forms/e2e
+VITE_MCP_BASE_URL=http://localhost:8080 npm run dev
 ```
 
-This opens a web UI where you can:
-- See all 8 tools
-- Call tools with test inputs
-- View mock responses
-- See JSON-RPC messages
+### Run via stdio (for VS Code Copilot agent)
 
-## Available Tools (8)
+Set `GITHUB_TOKEN` in your shell, then VS Code auto-starts the server via `.vscode/mcp.json`.
 
-### Proto Intelligence (4 tools)
-1. **search_protos** - Search proto definitions (returns mock data)
-2. **describe_message** - Get proto message docs (returns mock data)
-3. **get_field_path** - Resolve field paths (returns mock data)
-4. **list_config_messages** - List top-level configs (returns mock data)
+Or run directly:
 
-### ConfigService (3 tools)
-5. **get_config_set** - Get ConfigSet files (returns mock data)
-6. **upsert_config_set** - Create/update ConfigSet (returns mock data)
-7. **find_config_sets** - Search ConfigSets (returns mock data)
-
-### Jsonnet (1 tool)
-8. **render_file** - Evaluate Jsonnet (returns mock data)
-
-## Available Resources (4)
-
-1. **buildbarn://patterns/jsonnet** - Jsonnet patterns (excerpt)
-2. **jsonnet://spec/language-reference** - Jsonnet language ref (minimal)
-3. **buildbarn://protos/{service}/schema** - Proto schema (mock)
-4. **configset://{project}/{name}/files** - ConfigSet files (mock)
-
-## Project Structure
-
-```
-buildbarn-config-mcp/
-├── cmd/
-│   └── mcp-server/
-│       └── main.go              # Entry point, registers all tools/resources
-├── internal/
-│   ├── proto/
-│   │   └── handlers.go          # Proto intelligence tools (mocks)
-│   ├── configservice/
-│   │   └── handlers.go          # ConfigService tools (mocks)
-│   ├── jsonnet/
-│   │   └── handlers.go          # Jsonnet evaluation tool (mock)
-│   └── resources/
-│       └── resources.go         # Static and dynamic resources
-├── bin/
-│   └── mcp-server               # Built binary
-├── go.mod
-├── go.sum
-└── README.md
+```bash
+GITHUB_TOKEN=ghp_xxx go run ./cmd/mcp-server
 ```
 
-## Example: Call a Tool
+## VS Code Integration
 
-Using the MCP Inspector:
+The `.vscode/mcp.json` in this repo configures VS Code to auto-start the server in stdio mode when you open the project. Set `GITHUB_TOKEN` in your shell before opening VS Code (or in your shell profile).
 
-1. Open inspector: `npx @modelcontextprotocol/inspector go run ./cmd/mcp-server`
-2. Select tool: `search_protos`
-3. Enter parameters:
-   ```json
-   {
-     "query": "tracing",
-     "max_results": 5
-   }
-   ```
-4. See mock response:
-   ```json
-   {
-     "query": "tracing",
-     "max_results": 5,
-     "count": 2,
-     "results": [...],
-     "note": "🚧 Mock data - proto index not yet implemented"
-   }
-   ```
+## Environment Variables
 
-## Next Steps (Implementation Roadmap)
-
-See `/home/ndipiazza/source/hermetiq/hermetiq-genai-agent/projects/buildbarn-config-mcp/` for full docs:
-
-1. **Proto System** - Vendor Buildbarn protos, generate descriptors
-2. **Proto Index** - Implement actual search/describe logic
-3. **ConfigService Client** - Connect to real gRPC backend
-4. **Jsonnet Evaluator** - Use go-jsonnet to evaluate files
-5. **HTTP/SSE Transport** - For production remote access
-
-## Dependencies
-
-- **github.com/mark3labs/mcp-go** - MCP protocol implementation
-- Go 1.21+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MCP_TRANSPORT` | `stdio` | Transport: `stdio` or `http` |
+| `MCP_PORT` | `8080` | HTTP port (only used when `MCP_TRANSPORT=http`) |
+| `GITHUB_TOKEN` | — | GitHub PAT for `Hermetiq/bb-config` access |
 
 ## Development
 
 ```bash
-# Add dependencies
-go mod tidy
-
 # Build
 go build -o bin/mcp-server ./cmd/mcp-server
 
 # Test
-npx @modelcontextprotocol/inspector go run ./cmd/mcp-server
+go test ./...
 
-# Format
-go fmt ./...
+# Run tests with verbose output
+go test -v ./internal/configedit/...
 ```
 
-## Resources
+## Architecture
 
-- **Full Project Docs:** `/home/ndipiazza/source/hermetiq/hermetiq-genai-agent/projects/buildbarn-config-mcp/`
-- **MCP Protocol:** https://modelcontextprotocol.io/
-- **mcp-go Library:** https://github.com/mark3labs/mcp-go
-- **MCP Inspector:** https://github.com/modelcontextprotocol/inspector
+```
+buildbarn-forms (React UI)
+  └── JsonnetEditor (mcpBaseURL prop)
+        └── mcpClient.ts → POST /mcp
+buildbarn-config-mcp (this repo, Go)
+  ├── cmd/mcp-server/main.go  — HTTP/stdio transport, tool registration
+  ├── internal/configedit/    — stateless jsonnet mutation helpers
+  ├── internal/github/        — GitHub API client for Hermetiq/bb-config
+  └── internal/proto/         — proto definition tools (mock index)
+Hermetiq/bb-config
+  └── <collection>/<file>.jsonnet
+```
 
----
+## Security
 
-**This is a working skeleton!** All the tools respond with mock data that demonstrates the expected structure. Now you can incrementally replace mocks with real implementations.
+- Jsonnet evaluation uses `MemoryImporter` (no file/stdlib imports allowed)
+- `MaxStack = 100` prevents recursion DoS
+- GitHub writes require a blob SHA for optimistic locking
+
+## Related
+
+- `Hermetiq/buildbarn-forms` — React UI library with JsonnetEditor
+- `Hermetiq/bb-config` — Buildbarn jsonnet config storage
+- `Hermetiq/cloud-native/bep-nats/mcp` — Production MCP server (stateless tools only)
