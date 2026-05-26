@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	DefaultOwner = "Hermetiq"
+	DefaultOwner = "nddipiazza"
 	DefaultRepo  = "bb-config"
 )
 

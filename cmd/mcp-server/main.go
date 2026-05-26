@@ -10,6 +10,7 @@ import (
 
 "github.com/hermetiq/buildbarn-config-mcp/internal/configedit"
 bbgithub "github.com/hermetiq/buildbarn-config-mcp/internal/github"
+"github.com/hermetiq/buildbarn-config-mcp/internal/configservice"
 "github.com/hermetiq/buildbarn-config-mcp/internal/proto"
 "github.com/mark3labs/mcp-go/mcp"
 "github.com/mark3labs/mcp-go/server"
@@ -45,6 +46,7 @@ server.WithResourceCapabilities(true, false),
 registerProtoTools(s)
 registerBrowseTools(s, ghClient)
 registerMutationTools(s)
+configservice.RegisterBrowserTools(s, ghClient)
 
 switch strings.ToLower(transport) {
 case "http", "streamablehttp":
@@ -57,7 +59,8 @@ AllowedOrigins: []string{
 "http://localhost:4173",
 },
 AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
-AllowedHeaders:   []string{"Content-Type", "Authorization", "Accept"},
+AllowedHeaders:   []string{"Content-Type", "Authorization", "Accept", "Mcp-Session-Id"},
+ExposedHeaders:   []string{"Mcp-Session-Id"},
 AllowCredentials: false,
 })
 handler := corsMiddleware.Handler(httpServer)
